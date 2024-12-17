@@ -28,9 +28,9 @@ jobs:
       - name: Get changed files
         id: diff
         run: |
-          CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD)
-          echo "Changed files: $CHANGED_FILES"
+          CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD)          
           echo "CHANGED_FILES=$CHANGED_FILES" >> $GITHUB_ENV
+          echo "Changed files: $CHANGED_FILES"
 
       # Step 4: Generate unique branch name
       - name: Generate unique branch name
