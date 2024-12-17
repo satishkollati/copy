@@ -20,16 +20,25 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@example.com"
 
-      # Step 3: Get a list of changed files
+      # Step 3: Get a list of changed files (Handle shallow repo and single commit cases)
       - name: Get changed files
         id: diff
         run: |
-          # If there are multiple commits in the history, use HEAD~1..HEAD; otherwise, check for changes in the working directory
-          CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD)
-          if [ -z "$CHANGED_FILES" ]; then
-            # If no changes between commits, check for changes in the working directory (uncommitted changes)
+          # Fetch the history (ensure we are not working with a shallow repo)
+          git fetch --unshallow || echo "Already a full repository."
+
+          # Check if there is more than one commit in the repo
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          
+          if [ "$COMMIT_COUNT" -eq 1 ]; then
+            echo "Repository has only one commit, checking for modified files in the working directory."
+            # If only one commit, list modified files (uncommitted changes)
             CHANGED_FILES=$(git ls-files --modified)
+          else
+            # Otherwise, compare changes between the last two commits
+            CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD)
           fi
+
           echo "Changed files: $CHANGED_FILES"
           echo "CHANGED_FILES=$CHANGED_FILES" >> $GITHUB_ENV
 
@@ -46,12 +55,15 @@ jobs:
       - name: Create new feature branch
         run: |
           git checkout -b $BRANCH_NAME
+          
           # Get the list of changed files from the previous step
           CHANGED_FILES=$CHANGED_FILES
+          
           # If there are changed files, check them out
           if [ ! -z "$CHANGED_FILES" ]; then
             git checkout HEAD -- $CHANGED_FILES
           fi
+
           # Stage the changes and commit them
           git add .
           git commit -m "Create feature branch with specific files: $CHANGED_FILES"
