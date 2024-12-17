@@ -24,7 +24,12 @@ jobs:
       - name: Get changed files
         id: diff
         run: |
+          # If there are multiple commits in the history, use HEAD~1..HEAD; otherwise, check for changes in the working directory
           CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD)
+          if [ -z "$CHANGED_FILES" ]; then
+            # If no changes between commits, check for changes in the working directory (uncommitted changes)
+            CHANGED_FILES=$(git ls-files --modified)
+          fi
           echo "Changed files: $CHANGED_FILES"
           echo "CHANGED_FILES=$CHANGED_FILES" >> $GITHUB_ENV
 
@@ -41,14 +46,12 @@ jobs:
       - name: Create new feature branch
         run: |
           git checkout -b $BRANCH_NAME
-
           # Get the list of changed files from the previous step
           CHANGED_FILES=$CHANGED_FILES
-
-          # Remove all files from the current branch, then checkout only the changed files
-          git rm -rf .  # Remove all files from the working tree
-          git checkout HEAD -- $CHANGED_FILES  # Checkout only the changed/new files
-
+          # If there are changed files, check them out
+          if [ ! -z "$CHANGED_FILES" ]; then
+            git checkout HEAD -- $CHANGED_FILES
+          fi
           # Stage the changes and commit them
           git add .
           git commit -m "Create feature branch with specific files: $CHANGED_FILES"
